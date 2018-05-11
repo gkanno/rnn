@@ -20,7 +20,7 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
 
   // loads all samples from the table
   long n_samples = lua_objlen(L, samples_index);
-  THTensor *tensors[n_samples];
+  THTensor **tensors = (THTensor**)malloc( sizeof(THTensor*) *n_samples);
   lua_pushnil(L);
   while (lua_next(L, samples_index) != 0) {
     long index = lua_tointeger(L, -2);
@@ -31,7 +31,7 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
 
   // processes the samples to get some meta-info that will be used to determine the positioning in
   // the dense tensor created in the output
-  Sample samples_info[n_samples];
+  Sample *samples_info = (Sample*)malloc(sizeof(Sample) *n_samples);
   THTensor* step = THTensor_(new)(); // a tensor that contains first step of first tensor
   THTensor* _step = THTensor_(new)(); // contains first step of other tensors (sizes much match)
   for (long i = 0; i < n_samples; i++) {
@@ -39,7 +39,11 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
     if (i == 0)
       THTensor_(narrow)(step, tensors[i], 0, 0, 1);
     else if (!THTensor_(isSameSizeAs)(step, _step))
-      return LUA_HANDLE_ERROR_STR(L, "got tensors of different sizes");
+	{
+		free(tensors);
+		free(samples_info);
+		return LUA_HANDLE_ERROR_STR(L, "got tensors of different sizes");
+	}
     samples_info[i].length = THTensor_(size)(tensors[i], 0);
     samples_info[i].index = i;
     samples_info[i].assigned_row = -1;
@@ -166,6 +170,9 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
   THLongStorage_free(output_size);
   THByteTensor_free(mrow);
   THByteTensor_free(msection);
+
+		free(tensors);
+		free(samples_info);
 
   return 2;
 }

@@ -9,9 +9,13 @@ IF (NOT ("$ENV{CUDA}" STREQUAL "NO"))
   FIND_PACKAGE(CUDA 6.5)
 ENDIF()
 
-SET(BUILD_STATIC YES) # makes sure static targets are enabled in ADD_TORCH_PACKAGE
-SET(CMAKE_C_FLAGS
-  "--std=c99 -pedantic -Werror -Wall -Wextra -Wno-unused-function -D_GNU_SOURCE ${CMAKE_C_FLAGS}")
+IF(MSVC)
+  SET(CMAKE_C_FLAGS "/D_GNU_SOURCE ${CMAKE_C_FLAGS}")
+ELSE()
+  SET(BUILD_STATIC YES) # makes sure static targets are enabled in ADD_TORCH_PACKAGE
+  SET(CMAKE_C_FLAGS
+    "--std=c99 -pedantic -Werror -Wall -Wextra -Wno-unused-function -D_GNU_SOURCE ${CMAKE_C_FLAGS}")
+ENDIF()
 
 SET(src src/rnn.c)
 IF (CUDA_FOUND)

@@ -27,7 +27,7 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
 
   // loads all samples from the table
   long n_samples = lua_objlen(L, samples_index);
-  THCTensor *tensors[n_samples];
+  THCTensor **tensors = new THCTensor*[n_samples];
   lua_pushnil(L);
   while (lua_next(L, samples_index) != 0) {
     long index = lua_tointeger(L, -2);
@@ -38,7 +38,7 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
 
   // processes the samples to get some meta-info that will be used to determine the positioning in
   // the dense tensor created in the output
-  Sample samples_info[n_samples];
+  Sample *samples_info = new Sample[n_samples];
   THCTensor* step = THCTensor_(new)(state); // a tensor that contains first step of first tensor
   THCTensor* _step = THCTensor_(new)(state); // contains first step of other tensors (sizes much match)
   for (long i = 0; i < n_samples; i++) {
@@ -46,7 +46,11 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
     if (i == 0)
       THCTensor_(narrow)(state, step, tensors[i], 0, 0, 1);
     else if (!THCTensor_(isSameSizeAs)(state, step, _step))
-      return LUA_HANDLE_ERROR_STR(L, "got tensors of different sizes");
+	{
+		delete[] tensors;
+		delete[] samples_info;
+		return LUA_HANDLE_ERROR_STR(L, "got tensors of different sizes");
+	}
     samples_info[i].length = THCTensor_(size)(state, tensors[i], 0);
     samples_info[i].index = i;
     samples_info[i].assigned_row = -1;
@@ -173,6 +177,9 @@ static int nn_(from_samples_to_structured)(lua_State *L) {
   THLongStorage_free(output_size);
   THCudaByteTensor_free(state, mrow);
   THCudaByteTensor_free(state, msection);
+
+	delete[] tensors;
+	delete[] samples_info;
 
   return 2;
 }
