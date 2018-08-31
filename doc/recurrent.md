@@ -1,5 +1,5 @@
 <a name='rnn.recurrent'></a>
-# Recurrent Modlues #
+# Recurrent Modules #
 
 
 Modules that consider successive calls to `forward` as different time-steps in a sequence :
